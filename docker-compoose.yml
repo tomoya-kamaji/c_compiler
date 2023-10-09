@@ -1,0 +1,8 @@
+version: '3'
+services:
+  compilerbook:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      container_name: compilerbook
+    tty: true
