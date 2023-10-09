@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "*.bqsql": "bigquery",
+    "stdlib.h": "c",
+    "stdio.h": "c"
+  }
+}
