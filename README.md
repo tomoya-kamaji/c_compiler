@@ -6,3 +6,8 @@ https://www.sigbus.info/compilerbook#%E6%9C%AC%E6%9B%B8%E3%81%AE%E6%83%B3%E5%AE%
 ```
 docker run --rm -v $HOME/dev/c_compiler:/c -w /c compilerbook make test
 ```
+
+## 開発時メモ
+```
+docker run --rm -it -v $HOME/9cc:/9cc -w /9cc compilerbook
+```

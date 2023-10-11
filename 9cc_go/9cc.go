@@ -77,13 +77,17 @@ func tokenize() *Token {
 	head := &Token{}
 	cur := head
 
-	for i, ch := range p {
+	i := 0
+	for i < len(p) {
+		ch := rune(p[i])
 		if unicode.IsSpace(ch) {
+			i++
 			continue
 		}
 
 		if ch == '+' || ch == '-' {
 			cur = newToken(TK_RESERVED, cur, string(ch))
+			i++
 			continue
 		}
 
@@ -99,6 +103,7 @@ func tokenize() *Token {
 		}
 
 		errorAt(string(ch), "unexpected character")
+		i++
 	}
 
 	newToken(TK_EOF, cur, "")
@@ -120,21 +125,34 @@ func main() {
 
 	user_input = os.Args[1]
 	token = tokenize()
+	// printToken(token)
 
-	fmt.Println(".global main")
-	fmt.Println("main:")
+	fmt.Fprintln(file, ".global main")
+	fmt.Fprintln(file, "main:")
 
-	fmt.Printf("  mov x0, %d\n", expectNumber())
+	fmt.Fprintf(file, "  mov x0, %d\n", expectNumber())
 
 	for !atEOF() {
 		if consume('+') {
-			fmt.Printf("  add x0, x0, %d\n", expectNumber())
+			fmt.Fprintf(file, "  add x0, x0, %d\n", expectNumber())
 			continue
 		}
 
 		expect('-')
-		fmt.Printf("  sub x0, x0, %d\n", expectNumber())
+		fmt.Fprintf(file, "  sub x0, x0, %d\n", expectNumber())
 	}
 
-	fmt.Println("  ret")
+	fmt.Fprintln(file, "  ret")
+}
+
+func printToken(t *Token) {
+	if t == nil {
+		return
+	}
+
+	// Tokenの内容を出力
+	fmt.Printf("Token - kind: %v, val: %d, str: %s\n", t.kind, t.val, t.str)
+
+	// 次のTokenの内容も出力したい場合
+	printToken(t.next)
 }

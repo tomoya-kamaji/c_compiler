@@ -3,7 +3,7 @@ assert() {
   input="$2"
 
   # コンパイルして実行
-  ./9cc "$input" > tmp.s
+  go run 9cc.go "$input"
   cc -o tmp tmp.s
   ./tmp
   actual="$?"
@@ -17,7 +17,7 @@ assert() {
   fi
 }
 
-# assert 0 0
-# assert 42 42
-# assert 21 "5+20-4"
-assert 41 " 12 +34-  5 "
+assert 0 0
+assert 42 42
+assert 21 "5+20-4"
+assert 43 " 12 +34-3"
