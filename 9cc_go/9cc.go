@@ -19,6 +19,29 @@ const (
 	TOKEN_EOF
 )
 
+func (t TokenType) String() string {
+	switch t {
+	case TOKEN_INT:
+		return "TOKEN_INT"
+	case TOKEN_PLUS:
+		return "TOKEN_PLUS"
+	case TOKEN_MINUS:
+		return "TOKEN_MINUS"
+	case TOKEN_MUL:
+		return "TOKEN_MUL"
+	case TOKEN_DIV:
+		return "TOKEN_DIV"
+	case TOKEN_LPAREN:
+		return "TOKEN_LPAREN"
+	case TOKEN_RPAREN:
+		return "TOKEN_RPAREN"
+	case TOKEN_EOF:
+		return "TOKEN_EOF"
+	default:
+		return "UNKNOWN_TOKEN_TYPE"
+	}
+}
+
 type Token struct {
 	Type  TokenType
 	Value string
@@ -84,7 +107,7 @@ func (p *Parser) parsePrimary() int {
 	}
 }
 
-// 掛け算
+// 乗算： 3*4
 func (p *Parser) parseMul() int {
 	val := p.parsePrimary()
 
@@ -125,6 +148,17 @@ func main() {
 	tokens := tokenize(input)
 	parser := Parser{tokens, 0}
 	result := parser.parseExpr()
+	printParser(parser)
 
 	fmt.Printf("%s = %d\n", input, result)
+}
+
+func printParser(parser Parser) {
+	fmt.Printf("position:%d\n", parser.position)
+	printTokens(parser.tokens)
+}
+func printTokens(tokens []Token) {
+	for _, token := range tokens {
+		fmt.Printf("type:%s value:%s\n", token.Type.String(), token.Value)
+	}
 }
