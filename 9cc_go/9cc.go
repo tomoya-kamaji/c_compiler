@@ -2,157 +2,129 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strconv"
-	"unicode"
+	"strings"
 )
 
-type TokenKind int
+type TokenType int
 
 const (
-	TK_RESERVED TokenKind = iota
-	TK_NUM
-	TK_EOF
+	TOKEN_INT TokenType = iota
+	TOKEN_PLUS
+	TOKEN_MINUS
+	TOKEN_MUL
+	TOKEN_DIV
+	TOKEN_LPAREN
+	TOKEN_RPAREN
+	TOKEN_EOF
 )
 
 type Token struct {
-	kind TokenKind
-	next *Token
-	val  int
-	str  string
+	Type  TokenType
+	Value string
 }
 
-var user_input string
-var token *Token
+func tokenize(input string) []Token {
+	var tokens []Token
 
-func errorAt(loc, fmtStr string, args ...interface{}) {
-	pos := len(user_input) - len(loc)
-	fmt.Fprintln(os.Stderr, user_input)
-	fmt.Fprintf(os.Stderr, "%*s", pos, "")
-	fmt.Fprintln(os.Stderr, "^")
-	fmt.Fprintf(os.Stderr, fmtStr, args...)
-	fmt.Fprintln(os.Stderr, "")
-	os.Exit(1)
-}
-
-func consume(op rune) bool {
-	if token.kind != TK_RESERVED || rune(token.str[0]) != op {
-		return false
+	for i := 0; i < len(input); i++ {
+		switch input[i] {
+		case ' ':
+			continue
+		case '+':
+			tokens = append(tokens, Token{TOKEN_PLUS, "+"})
+		case '-':
+			tokens = append(tokens, Token{TOKEN_MINUS, "-"})
+		case '*':
+			tokens = append(tokens, Token{TOKEN_MUL, "*"})
+		case '/':
+			tokens = append(tokens, Token{TOKEN_DIV, "/"})
+		case '(':
+			tokens = append(tokens, Token{TOKEN_LPAREN, "("})
+		case ')':
+			tokens = append(tokens, Token{TOKEN_RPAREN, ")"})
+		default:
+			start := i
+			for i+1 < len(input) && strings.ContainsAny(string(input[i+1]), "0123456789") {
+				i++
+			}
+			tokens = append(tokens, Token{TOKEN_INT, input[start : i+1]})
+		}
 	}
-	token = token.next
-	return true
+
+	tokens = append(tokens, Token{TOKEN_EOF, ""})
+	return tokens
 }
 
-func expect(op rune) {
-	if token.kind != TK_RESERVED || rune(token.str[0]) != op {
-		errorAt(token.str, "expected '%c'", op)
-	}
-	token = token.next
+type Parser struct {
+	tokens   []Token
+	position int
 }
 
-func expectNumber() int {
-	if token.kind != TK_NUM {
-		errorAt(token.str, "expected a number")
-	}
-	val := token.val
-	token = token.next
-	return val
-}
-
-func atEOF() bool {
-	return token.kind == TK_EOF
-}
-
-func newToken(kind TokenKind, cur *Token, str string) *Token {
-	tok := &Token{
-		kind: kind,
-		str:  str,
-	}
-	cur.next = tok
+func (p *Parser) getNextToken() Token {
+	tok := p.tokens[p.position]
+	p.position++
 	return tok
 }
 
-func tokenize() *Token {
-	p := user_input
-	head := &Token{}
-	cur := head
-
-	i := 0
-	for i < len(p) {
-		ch := rune(p[i])
-		if unicode.IsSpace(ch) {
-			i++
-			continue
+func (p *Parser) parsePrimary() int {
+	token := p.getNextToken()
+	switch token.Type {
+	case TOKEN_INT:
+		val, _ := strconv.Atoi(token.Value)
+		return val
+	case TOKEN_LPAREN:
+		val := p.parseExpr()
+		if p.getNextToken().Type != TOKEN_RPAREN {
+			panic("Expected closing parenthesis!")
 		}
-
-		if ch == '+' || ch == '-' {
-			cur = newToken(TK_RESERVED, cur, string(ch))
-			i++
-			continue
-		}
-
-		if unicode.IsDigit(ch) {
-			start := i
-			for i < len(p) && unicode.IsDigit(rune(p[i])) {
-				i++
-			}
-			numStr := p[start:i]
-			cur = newToken(TK_NUM, cur, numStr)
-			cur.val, _ = strconv.Atoi(numStr)
-			continue
-		}
-
-		errorAt(string(ch), "unexpected character")
-		i++
+		return val
+	default:
+		panic("Expected integer or parenthesis!")
 	}
+}
 
-	newToken(TK_EOF, cur, "")
-	return head.next
+// 掛け算
+func (p *Parser) parseMul() int {
+	val := p.parsePrimary()
+
+	for {
+		token := p.getNextToken()
+		switch token.Type {
+		case TOKEN_MUL:
+			val *= p.parsePrimary()
+		case TOKEN_DIV:
+			val /= p.parsePrimary()
+		default:
+			p.position--
+			return val
+		}
+	}
+}
+
+func (p *Parser) parseExpr() int {
+	val := p.parseMul()
+
+	for {
+		token := p.getNextToken()
+		switch token.Type {
+		case TOKEN_PLUS:
+			val += p.parseMul()
+		case TOKEN_MINUS:
+			val -= p.parseMul()
+		default:
+			p.position--
+			return val
+		}
+	}
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "%s: invalid number of arguments\n", os.Args[0])
-		os.Exit(1)
-	}
-	// ファイルを開く（または新しく作成する）
-	file, err := os.Create("tmp.s")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create file: %v\n", err)
-		os.Exit(1)
-	}
-	defer file.Close()
+	input := "3+4*10" // You can change this to any expression that fits the given grammar
 
-	user_input = os.Args[1]
-	token = tokenize()
-	// printToken(token)
+	tokens := tokenize(input)
+	parser := Parser{tokens, 0}
+	result := parser.parseExpr()
 
-	fmt.Fprintln(file, ".global main")
-	fmt.Fprintln(file, "main:")
-
-	fmt.Fprintf(file, "  mov x0, %d\n", expectNumber())
-
-	for !atEOF() {
-		if consume('+') {
-			fmt.Fprintf(file, "  add x0, x0, %d\n", expectNumber())
-			continue
-		}
-
-		expect('-')
-		fmt.Fprintf(file, "  sub x0, x0, %d\n", expectNumber())
-	}
-
-	fmt.Fprintln(file, "  ret")
-}
-
-func printToken(t *Token) {
-	if t == nil {
-		return
-	}
-
-	// Tokenの内容を出力
-	fmt.Printf("Token - kind: %v, val: %d, str: %s\n", t.kind, t.val, t.str)
-
-	// 次のTokenの内容も出力したい場合
-	printToken(t.next)
+	fmt.Printf("%s = %d\n", input, result)
 }
