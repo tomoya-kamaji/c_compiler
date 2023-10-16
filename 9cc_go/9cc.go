@@ -143,7 +143,7 @@ func (p *Parser) parseExpr() int {
 }
 
 func main() {
-	input := "3+4*10" // You can change this to any expression that fits the given grammar
+	input := "3+4*10"
 
 	tokens := tokenize(input)
 	parser := Parser{tokens, 0}
@@ -159,6 +159,6 @@ func printParser(parser Parser) {
 }
 func printTokens(tokens []Token) {
 	for _, token := range tokens {
-		fmt.Printf("type:%s value:%s\n", token.Type.String(), token.Value)
+		fmt.Printf("token  type:%s value:%s\n", token.Type.String(), token.Value)
 	}
 }
